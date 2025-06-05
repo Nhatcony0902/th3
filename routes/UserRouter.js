@@ -28,41 +28,70 @@ router.get("/:userId", verifyToken, async function(req, res){
   }
 })
 
-router.post("/user", verifyToken, async function(req, res){
-  const {login_name, password, repassword, first_name, last_name, location, description, occupation} = req.body;
-  if(!login_name || !password || !first_name || !last_name || repassword !== password){
-    return res.status(400).json({message: "Bad Request"});
+router.post("/user", async function (req, res) {
+   console.log("Dữ liệu nhận được:", req.body);
+  const {
+    login_name,
+    password,
+    repassword,
+    first_name,
+    last_name,
+    location,
+    description,
+    occupation,
+  } = req.body;
+
+  if (!login_name || !password || !first_name || !last_name) {
+    return res
+      .status(400)
+      .json({ message: "Missing required fields: login_name, password, first_name, last_name" });
   }
+
+  // Kiểm tra password khớp nhau
+  if (password !== repassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
+  }
+
   try {
-    const userExists = await User.findOne({login_name: login_name});
-    if(userExists){
-      return res.status(400).json({message: "Bad Request"});
+    // Kiểm tra login_name đã tồn tại chưa
+    const userExists = await User.findOne({ login_name: login_name });
+    console.log(userExists);
+    if (userExists) {
+      return res.status(400).json({ message: "Login name already exists" });
     }
+
+    // Tạo user mới
     const user = new User({
-      login_name: login_name,
-      password: password,
-      first_name: first_name,
-      last_name: last_name,
-      location: location,
-      description: description,
-      occupation: occupation
-    })
+      login_name,
+      password,
+      first_name,
+      last_name,
+      location,
+      description,
+      occupation,
+    });
+
     await user.save();
 
     const user_id = user._id;
+
+    // Tạo JWT token
     jwt.sign({ user_id }, secretKey, { expiresIn: "1h" }, (err, token) => {
       if (err) {
-        res.status(400).json({message: "Bad Request"});
-      } else {
-        res.json({ token: token, id: user_id, login_name: login_name});
-    }
+        console.error("Token generation failed:", err);
+        return res.status(500).json({ message: "Failed to generate token" });
+      }
+
+      res.status(200).json({
+        token,
+        id: user_id,
+        login_name,
+      });
     });
-
-
   } catch (error) {
-    console.log(error);
-    return res.status(400).json({message: "Bad Request"});
+    console.error("Registration error:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-})
+});
 
 module.exports = router;

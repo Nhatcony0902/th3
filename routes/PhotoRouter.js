@@ -6,6 +6,7 @@ const verifyToken = require("../middleware/auth");
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { photoOfUserModel } = require("../modelData/models");
 const router = express.Router();
 
 // config storage images
@@ -54,7 +55,45 @@ router.post("/commentsOfPhoto/:photo_id", verifyToken, async function(req, res) 
     console.log(error);
   }
 })
+router.delete("/commentsOfPhoto/:commentId", async function (req, res) {
+    const commentId = req.params.commentId;
 
+    if (!mongoose.Types.ObjectId.isValid(commentId)) {
+        return res.status(400).send({ message: "Invalid comment ID" });
+    }
+
+    try {
+        const result = await Photo.updateOne(
+            { "comments._id": commentId },
+            { $pull: { comments: { _id: commentId } } }
+        );
+
+        if (result.modifiedCount === 0) {
+            return res.status(404).send({ message: "Comment not found" });
+        }
+
+        return res.status(200).send({ message: "Comment deleted" });
+    } catch (error) {
+        console.error("Delete failed:", error);
+        return res.status(500).send({ message: "Internal Server Error", error: error.message });
+    }
+});
+
+router.post("/updatecommentsOfPhoto/:commentId",async function (req,res) {
+  const slug=req.params.commentId;
+  const { user_id, comment } = req.body;
+  console.log()
+   try {
+           await Photo.updateOne(
+            {"comments._id":slug},
+            {$set:{comments: { comment:comment }}},
+        );
+        return res.status(200).send({message:"Edit suscess"})
+    
+   } catch (error) {
+    
+   }
+})
 router.post('/photos/new', verifyToken, upload.single('file'), async function(req, res){
   try {
     if (!req.file) {
