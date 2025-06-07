@@ -27,7 +27,22 @@ router.get("/:userId", verifyToken, async function(req, res){
     console.log(error);
   }
 })
-
+router.post("/edituser/:id",async function (req,res) {
+  const userId=req.params.id;
+  const {first_name,password}=req.body;
+  console.log(userId);
+  console.log(req.body);
+  try {
+    await User.updateOne(
+      {"_id":userId},
+      {$set: {first_name:first_name,password:password} },
+    );
+     return res.status(200).send({message:"Edit suscess"})
+  } catch (error) {
+    
+  }
+  
+})
 router.post("/user", async function (req, res) {
    console.log("Dữ liệu nhận được:", req.body);
   const {
